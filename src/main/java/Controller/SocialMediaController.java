@@ -1,32 +1,38 @@
 package Controller;
 
 import io.javalin.Javalin;
-import io.javalin.http.Context;
+import static io.javalin.apibuilder.ApiBuilder.*;
 
-/**
- * TODO: You will need to write your own endpoints and handlers for your controller. The endpoints you will need can be
- * found in readme.md as well as the test cases. You should
- * refer to prior mini-project labs and lecture materials for guidance on how a controller may be built.
- */
+import Service.AccountService;
+import Service.MessageService;
+
 public class SocialMediaController {
-    /**
-     * In order for the test cases to work, you will need to write the endpoints in the startAPI() method, as the test
-     * suite must receive a Javalin object from this method.
-     * @return a Javalin app object which defines the behavior of the Javalin controller.
-     */
     public Javalin startAPI() {
         Javalin app = Javalin.create();
-        app.get("example-endpoint", this::exampleHandler);
+
+        // Initalize database service objects to pass to controllers - can easily be adapted to inject these differently later
+        AccountService accountService = new AccountService();
+        MessageService messageService = new MessageService(); 
+        // Initalize API controllers
+        AccountController accountController = new AccountController(accountService);
+        MessageController messageController = new MessageController(accountService, messageService);
+
+        app.routes(() -> {
+            post("/register", accountController::register);
+            post("/login", accountController::login);
+            path("/messages", () -> {
+                post(messageController::createMessage);
+                get(messageController::getAllMessages);
+                path("/{id}", () -> {
+                    get(messageController::getMessageById);
+                    delete(messageController::deleteMessage);
+                    patch(messageController::updateMessage);
+                });
+            });
+            get("/accounts/{id}/messages", messageController::getMessagesByUser);
+        });
 
         return app;
-    }
-
-    /**
-     * This is an example handler for an example endpoint.
-     * @param context The Javalin Context object manages information about both the HTTP request and response.
-     */
-    private void exampleHandler(Context context) {
-        context.json("sample text");
     }
 
 
